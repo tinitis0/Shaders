@@ -1,0 +1,65 @@
+#version 330
+
+// Input vertex data, each does different thing
+layout(location = 0) in vec3 position; // Position layout
+layout(location = 1) in vec2 textCoord;// Texture layout
+layout(location = 2) in vec3 normal; //Normal layout
+layout(location = 3) in vec3 tangent; // Tangent layout
+
+
+// interface block, output data
+out VS_OUT
+{
+	vec3 FragPos; // fragment position
+	vec2 TextCoord; //texture coordinates
+	vec3 FragNormal; // fragment normal
+
+    vec3 TangentLightPos; // tengent light position
+    vec3 TangentViewPos; // tangent view position
+    vec3 TangentFragPos; // tangent fragment position
+}vs_out;
+ 
+ // Constant values for the mesh
+uniform mat4 projection; // projection matrix uniform
+uniform mat4 view; // view matrix uniform
+uniform mat4 model; // model matrix uniform
+
+uniform vec3 lightPos; // light position uniform vector 
+uniform vec3 viewPos; // view position uniform vector 
+
+void main()
+{
+	// Output position of the vertex
+	gl_Position = projection * view * model * vec4(position, 1.0); 
+
+	// Output position of fragment 
+	vs_out.FragPos = vec3(model * vec4(position, 1.0)); 
+
+	// Output coordinates of texture
+	vs_out.TextCoord = textCoord;
+	
+	// normal mapping matrix
+	mat3 normalMatrix = transpose(inverse(mat3(model)));
+	vs_out.FragNormal = normalMatrix * normal; 
+
+	// Normalises tangent and normal
+	vec3 T = normalize(normalMatrix * tangent);
+	vec3 N = normalize(normalMatrix * normal);
+	
+	// Sets T to be normalised, by doing dot product of normalised tangent and normal
+	T = normalize(T - dot(T, N) * N); 
+
+	// cross product of Normal and Tangent
+	vec3 B = cross(N, T);  
+	
+    // Tangent, Bitangent, normal calculation
+    mat3 TBN = transpose(mat3(T, B, N));
+    //Tangent light position output is the TBN multiplied by the light position
+    vs_out.TangentLightPos = TBN * lightPos;
+    //Tangent view position output is the TBN multiplied by the view position
+    vs_out.TangentViewPos  = TBN * viewPos;
+    //Tangent fragment position output is the TBN multiplied by the frag position
+    vs_out.TangentFragPos  = TBN * vs_out.FragPos;
+    //New fragment normal output is the TBN multiplied by the fragment normal output
+	vs_out.FragNormal = TBN * vs_out.FragNormal; 
+}
